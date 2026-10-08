@@ -1,0 +1,47 @@
+name: Engine 1 Autonomous Telemetry Ingestion
+
+on:
+  schedule:
+    - cron: '0 4 * * *' # Executes daily autonomously
+  repository_dispatch:
+    types: [trigger-ingestion]
+  workflow_dispatch:
+
+jobs:
+  ingest_telemetry:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install Dependencies
+        run: pip install supabase requests pandas numpy python-dotenv pydantic postgrest
+          
+      - name: Run Supabase Ping (Keep-Alive)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python engine1_observatory/db_client.py
+        
+      - name: Run Match Data Ingestion
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python engine1_observatory/ingest_sackmann.py
+        
+      - name: Run Weather & Aerodynamics
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python engine1_observatory/ingest_weather.py
+        
+      - name: Run Market Odds & QDT Extraction
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python engine1_observatory/ingest_market.py
